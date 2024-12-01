@@ -64,25 +64,14 @@ jobs:
       - name: Build Base
         run: cargo build --release    
       - name: build gtk4 dlls
-        run: |
-          copy c:\gtk-build\gtk\x64\release\bin\glib-2.0-0.dll .\target\release
-          copy c:\gtk-build\gtk\x64\release\bin\gobject-2.0-0.dll .\target\release
-          copy c:\gtk-build\gtk\x64\release\bin\gio-2.0-0.dll .\target\release
-          copy c:\gtk-build\gtk\x64\release\bin\gdk_pixbuf-2.0-0.dll .\target\release
-          copy c:\gtk-build\gtk\x64\release\bin\graphene-1.0-0.dll .\target\release
-          copy c:\gtk-build\gtk\x64\release\bin\gtk-4-1.dll .\target\release
+        run: copy c:\gtk-build\gtk\x64\release\bin\*.dll .\target\release
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: holani_gtk-x86_64-windows
           path: |
             target/release/holani-gtk.exe
-            target/release/glib-2.0-0.dll
-            target/release/gobject-2.0-0.dll
-            target/release/gio-2.0-0.dll
-            target/release/gdk_pixbuf-2.0-0.dll
-            target/release/graphene-1.0-0.dll
-            target/release/gtk-4-1.dll
+            target/release/*.dll
           retention-days: 5
   build-osx-aarch64:
     name: Build osx aarch64
@@ -123,5 +112,5 @@ jobs:
         with:
           files: |
             holani_gtk-x86_64-linux/holani-gtk-x86_64-linux
-            holani_gtk-x86_64-windows/holani-gtk.exe
+            holani_gtk-x86_64-windows
             holani_gtk-aarch64-osx/holani-gtk-aarch64-osx
