@@ -2,6 +2,8 @@
 
 A GTK4 frontend for the Atari Lynx emulator [Holani](https://github.com/LLeny/holani).
 
+![Holani](/assets/holani.jpg?raw=true "Holani")
+
 ## Build
 
 You will need [Rust and its package manager Cargo](https://www.rust-lang.org/) and [GTK4](https://gtk-rs.org/gtk4-rs/stable/latest/book/installation.html). 
