@@ -70,7 +70,7 @@ jobs:
           copy c:\gtk-build\gtk\x64\release\bin\gio-2.0-0.dll .\target\release
           copy c:\gtk-build\gtk\x64\release\bin\gdk_pixbuf-2.0-0.dll .\target\release
           copy c:\gtk-build\gtk\x64\release\bin\graphene-1.0-0.dll .\target\release
-          copy c:\gtk-build\gtk\x64\release\bin\gtk-4-1 .\target\release
+          copy c:\gtk-build\gtk\x64\release\bin\gtk-4-1.dll .\target\release
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
