@@ -61,7 +61,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: holani_gtk-x86_64-windows
-          path: target/release/holani-gtk.exe
+          path: |
+            target/release/holani-gtk.exe
+            c:\gtk-build\gtk\x64\release\bin\glib-2.0-0.dll
+            c:\gtk-build\gtk\x64\release\bin\gobject-2.0-0.dll
+            c:\gtk-build\gtk\x64\release\bin\gio-2.0-0.dll
+            c:\gtk-build\gtk\x64\release\bin\gdk_pixbuf-2.0-0.dll
+            c:\gtk-build\gtk\x64\release\bin\graphene-1.0-0.dll
+            c:\gtk-build\gtk\x64\release\bin\gtk-4-1.dll
           retention-days: 5
   build-osx-aarch64:
     name: Build osx aarch64
