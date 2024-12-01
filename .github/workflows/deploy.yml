@@ -104,4 +104,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: '**/holani_gtk*.zip'
+          files: |
+            holani_gtk-x86_64-linux/holani-gtk-x86_64-linux
+            holani_gtk-aarch64-osx/holani-gtk-aarch64-osx
+            '**/holani_gtk*.zip'
