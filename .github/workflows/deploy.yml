@@ -57,15 +57,16 @@ jobs:
         uses: actions/checkout@v4
       - name: Build Base
         run: cargo build --release    
-      - name: build gtk4 dlls
-        run: copy c:\gtk-build\gtk\x64\release\bin\*.dll .\target\release
+      - name: build archive
+        run: |
+          copy c:\gtk-build\gtk\x64\release\bin\*.dll .\target\release
+          cd target\release
+          7z a -tzip holani_gtk-x86_64-windows.zip *.exe *.dll
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: holani_gtk-x86_64-windows
-          path: |
-            target/release/holani-gtk.exe
-            target/release/*.dll
+          path: target/release/holani_gtk-x86_64-windows.zip
           retention-days: 5
   build-osx-aarch64:
     name: Build osx aarch64
@@ -107,4 +108,4 @@ jobs:
           files: |
             holani_gtk-x86_64-linux/holani-gtk-x86_64-linux
             holani_gtk-aarch64-osx/holani-gtk-aarch64-osx
-            '**/holani_gtk*.zip'
+            holani_gtk-x86_64-windows/holani_gtk-x86_64-windows.zip
