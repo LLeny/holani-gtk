@@ -1,0 +1,106 @@
+name: Deploy Workflow
+on:
+  push:
+    tags:
+      - "*"
+jobs:
+  build-linux:
+    name: Build Linux
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check architecture
+        run: |
+          uname -a
+          find $(rustc --print sysroot) -name 'libstd-*.rlib' | sed -ne 's:^.*/\([^/]*\)/lib/libstd-[^/]*.rlib:\1:p'
+      - name: apt
+        run: sudo apt update && sudo apt install -yq build-essential libasound2t64 libasound2-dev alsa-tools alsa-utils libgtk-4-dev libdbus-1-dev libfuse2 librsvg2-dev
+      - name: Checkout code from repository
+        uses: actions/checkout@v4
+      - name: Build Base
+        run: cargo build --release
+      - name: Transform filenames
+        run: mv target/release/holani-gtk holani-gtk-x86_64-linux
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: holani_gtk-x86_64-linux
+          path: holani-gtk-x86_64-linux
+          retention-days: 5
+  build-windows:
+    name: Build Windows
+    timeout-minutes: 90
+    runs-on: windows-latest
+    steps:
+      - name: Configure GTK4 cache (Windows)
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        id: cache
+        with:
+          path: C:\gtk-build\gtk\x64\release
+          key: ${{ runner.os }}-gtk4
+      - name: build gtk4
+        run: |
+          choco install python312
+          py -3.13 -m pip install --user pipx
+          py -3.13 -m pipx ensurepath
+          py -m venv .venv
+          .\.venv\Scripts\activate.ps1
+          py -m pip install gvsbuild
+          gvsbuild build gtk4 librsvg
+        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Configure GTK4 (Windows)
+        run: |
+          Add-Content $env:GITHUB_ENV "PKG_CONFIG_PATH=C:\gtk-build\gtk\x64\release\lib\pkgconfig"
+          Add-Content $env:GITHUB_ENV ("LIB=" + $env:LIB + ";" + "C:\gtk-build\gtk\x64\release\lib")
+          Add-Content $env:GITHUB_PATH "C:\gtk-build\gtk\x64\release\bin"
+      - name: Checkout code from repository
+        uses: actions/checkout@v4
+      - name: Build Base
+        run: cargo build --release     
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: holani_gtk-x86_64-windows
+          path: target/release/holani-gtk.exe
+          retention-days: 5
+  build-osx-aarch64:
+    name: Build osx aarch64
+    timeout-minutes: 30
+    runs-on: macos-14
+    steps:
+      - name: Check architecture
+        run: |
+          uname -a
+          find $(rustc --print sysroot) -name 'libstd-*.rlib' | sed -ne 's:^.*/\([^/]*\)/lib/libstd-[^/]*.rlib:\1:p'
+      - name: Checkout code from repository
+        uses: actions/checkout@v4
+      - name: brew
+        run: brew install gtk4            
+      - name: Build Base aarch64
+        run: cargo build --release 
+      - name: Transform filenames
+        run: mv target/release/holani-gtk holani-gtk-aarch64-osx
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: holani_gtk-aarch64-osx
+          path: holani-gtk-aarch64-osx
+          retention-days: 5    
+          
+  release:
+    name: Release
+    needs: [build-linux, build-windows, build-osx-aarch64]
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            holani_gtk-x86_64-linux/holani-gtk-x86_64-linux
+            holani_gtk-x86_64-windows/holani-gtk.exe
+            holani_gtk-aarch64-osx/holani-gtk-aarch64-osx
