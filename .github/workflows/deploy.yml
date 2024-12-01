@@ -32,12 +32,12 @@ jobs:
     timeout-minutes: 90
     runs-on: windows-latest
     steps:
-      - name: Configure GTK4 cache (Windows)
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
-        id: cache
+      - name: Configure GTK4 cache
+        uses: actions/cache@v4
+        id: cache-gtk4
         with:
           path: C:\gtk-build\gtk\x64\release
-          key: ${{ runner.os }}-gtk4
+          key: windows-gtk4
       - name: build gtk4
         run: |
           choco install python312
@@ -47,7 +47,13 @@ jobs:
           .\.venv\Scripts\activate.ps1
           py -m pip install gvsbuild
           gvsbuild build gtk4 librsvg
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true'    
+      - name: Save gtk4
+        id: cache-gtk4-save
+        uses: actions/cache/save@v4
+        with:
+          path: C:\gtk-build\gtk\x64\release
+          key: windows-gtk4
       - name: Configure GTK4 (Windows)
         run: |
           Add-Content $env:GITHUB_ENV "PKG_CONFIG_PATH=C:\gtk-build\gtk\x64\release\lib\pkgconfig"
