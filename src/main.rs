@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 use app::App;
+use clap::Parser;
 use gtk::{gdk, prelude::*};
 use gtk::{glib, Application};
 use runner::runner_config::RunnerConfig;
@@ -11,6 +12,14 @@ mod lynx_display;
 mod runner;
 
 const APP_ID: &str = "io.github.lleny.holani-gtk";
+
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Cartridge, can be .o or a .lnx file
+    #[arg(short, long)]
+    cartridge: Option<PathBuf>,
+}
 
 pub(crate) enum Event {
     UpdateDisplay(Vec<u8>),
@@ -32,12 +41,13 @@ pub(crate) enum Event {
 fn main() -> glib::ExitCode {  
     env_logger::init(); 
     let mainapp = Application::builder().application_id(APP_ID).build();
+    let config = process_args();
     let qapp = mainapp.clone();
 
     mainapp.connect_activate(move |app| {
         let lapp = qapp.clone();
         let (event_tx, event_rx) = kanal::unbounded::<Event>();
-        let mut app = App::new(app, event_tx);
+        let mut app = App::new(app, event_tx, config.clone());
 
         let event_handler = async move {
             while let Ok(event) = event_rx.as_async().recv().await {
@@ -63,10 +73,19 @@ fn main() -> glib::ExitCode {
         glib::MainContext::default().spawn_local(event_handler);
     });
     
-    mainapp.run()
+    mainapp.run_with_args(&[""])
 }
 
+fn process_args() -> RunnerConfig {
+    let args = Args::parse();
 
+    let mut config = RunnerConfig::default();
+    if let Some(cart) = args.cartridge {
+        config.set_cartridge(cart);
+    }
+
+    config
+}
 
 
 

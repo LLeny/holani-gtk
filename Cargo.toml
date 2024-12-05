@@ -21,3 +21,4 @@ thread-priority = "1.1.0"
 confy = "0.6.1"
 strum = "0.26"
 strum_macros = "0.26"
+clap = { version = "4.5", features = ["derive"] }

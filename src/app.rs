@@ -35,7 +35,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(app: &gtk::Application, event_tx: kanal::Sender<Event>) -> Self {
+    pub fn new(app: &gtk::Application, event_tx: kanal::Sender<Event>, conf: RunnerConfig) -> Self {
         
         let mut config = match confy::load::<RunnerConfig>("holani-gtk", None) {
             Err(e) => {
@@ -44,6 +44,10 @@ impl App {
             }
             Ok(s) => s,
         };
+
+        if let Some(cart) = conf.cartridge() {
+            config.set_cartridge(cart.clone());
+        }
 
         let mut runner = Runner::new();
 
