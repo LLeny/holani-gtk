@@ -45,6 +45,9 @@ impl App {
             Ok(s) => s,
         };
 
+        if let Some(rom) = conf.rom() {
+            config.set_rom(rom.clone());
+        }
         if let Some(cart) = conf.cartridge() {
             config.set_cartridge(cart.clone());
         }

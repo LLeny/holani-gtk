@@ -28,6 +28,7 @@ Usage: holani-gtk [OPTIONS]
 
 Options:
   -c, --cartridge <CARTRIDGE>  Cartridge, can be .o or a .lnx file
+  -r, --rom <ROM>              ROM override
   -s, --single-instance        Allows only one instance running
   -h, --help                   Print help
   -V, --version                Print version

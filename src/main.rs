@@ -26,6 +26,10 @@ struct Args {
     #[arg(short, long)]
     cartridge: Option<PathBuf>,
 
+    /// ROM override
+    #[arg(short, long)]
+    rom: Option<PathBuf>,
+    
     /// Allows only one instance running
     #[arg(short, long, default_value_t = false)]
     single_instance: bool,
@@ -108,6 +112,9 @@ fn process_args() -> RunnerConfig {
     let args = Args::parse();
 
     let mut config = RunnerConfig::default();
+    if let Some(rom) = args.rom {
+        config.set_rom(rom);
+    }
     if let Some(cart) = args.cartridge {
         config.set_cartridge(cart);
     }
