@@ -1,9 +1,9 @@
-use std::{path::PathBuf, time::{Duration, Instant}};
+use std::{path::{Path, PathBuf}, str::FromStr, time::{Duration, Instant}};
 use holani::{cartridge::lnx_header::LNXRotation, Lynx};
 use log::trace;
 use rodio::{buffer::SamplesBuffer, OutputStream, Sink};
-
-use crate::Event;
+use shared_memory::{Shmem, ShmemConf, ShmemError};
+use crate::{Event, CART_ID, LOCK_SIZE};
 
 use super::{runner_config::{RunnerAction, RunnerStatus}, RunnerConfig, RunnerThread, CRYSTAL_FREQUENCY, SAMPLE_RATE};
 const TICKS_PER_AUDIO_SAMPLE: u64 = CRYSTAL_FREQUENCY as u64 / SAMPLE_RATE as u64;
@@ -177,9 +177,50 @@ impl RunnerThread for PerFrameRunnerThread {
             self.sink = Some(Sink::try_new(&stream_handle).unwrap());
         }
 
+        let mut shmem: Option<Shmem> = None;
+        let mut raw_ptr: *mut u8 = std::ptr::null_mut();
+        let mut str_len: *mut u32 = std::ptr::null_mut();
+        let mut str_data: &mut [u8] = &mut [0; 0];
+
+        if self.config.single_instance() {
+            // Initialize the shared memory instance for signals
+            shmem = Some(match ShmemConf::new().size(LOCK_SIZE).flink(CART_ID).create() {
+                Ok(m) => m,
+                Err(ShmemError::LinkExists) => match ShmemConf::new().flink(CART_ID).open() {
+                    Ok(m) => m,
+                    Err(_) => match ShmemConf::new().size(LOCK_SIZE).flink(CART_ID).force_create_flink().create() {
+                        Ok(m) => m,
+                        Err(e) => panic!("Unable to create or open shmem flink: {}", e),
+                    }
+                },
+                Err(e) => panic!("Unable to create or open shmem flink: {}", e)
+            });
+            unsafe { 
+                let m = shmem.as_ref().unwrap();
+                raw_ptr = m.as_ptr();
+                str_len = raw_ptr as *mut u32;
+                str_data = std::slice::from_raw_parts_mut(
+                    raw_ptr.add(std::mem::size_of::<u32>()),
+                    m.len() - std::mem::size_of::<u32>()
+                );
+                *str_len = 0_u32;
+            }
+        }
+
         loop {
             if self.inputs() {
                 return;
+            }
+
+            // Check if a cart open request has been posted in the shared memory
+            if self.config.single_instance() && unsafe { *str_len } > 0 {
+                let shared_str = unsafe { std::str::from_utf8_unchecked(&str_data[..std::ptr::read_volatile(str_len) as usize]) };
+                if Path::new(shared_str).exists() {
+                    self.config.set_cartridge(PathBuf::from_str(shared_str).unwrap());
+                    self.load_cart();
+                    self.reset();
+                    }
+                unsafe { *str_len = 0 };
             }
 
             self.config_update();

@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashMap, default, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 use serde::{Serialize, Deserialize};
 use gtk::gdk;
 use holani::cartridge::lnx_header::LNXRotation;
@@ -52,6 +52,8 @@ pub(crate) struct RunnerConfig {
     rotation: LNXRotation,
     #[serde(skip)]
     action: Option<RunnerAction>,
+    #[serde(skip)]
+    single_instance: bool,
 }
 
 impl Default for RunnerConfig {
@@ -65,6 +67,7 @@ impl Default for RunnerConfig {
             status: RunnerStatus::Running,
             rotation: LNXRotation::None,
             action: None,
+            single_instance: false,
         };
 
         slf.set_button_mapping(gdk::Key::Up, Input::Up);
@@ -152,5 +155,13 @@ impl RunnerConfig {
     
     pub(crate) fn set_action(&mut self, action: RunnerAction) {
         self.action = Some(action);
+    }
+    
+    pub(crate) fn single_instance(&self) -> bool {
+        self.single_instance
+    }
+    
+    pub(crate) fn set_single_instance(&mut self, single_instance: bool) {
+        self.single_instance = single_instance;
     }
 }

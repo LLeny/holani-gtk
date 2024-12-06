@@ -19,3 +19,18 @@ cargo build --release
 ```
 
 The executable will be in the `target/release/` directory.
+
+
+## Usage
+
+```
+Usage: holani-gtk [OPTIONS]
+
+Options:
+  -c, --cartridge <CARTRIDGE>  Cartridge, can be .o or a .lnx file
+  -s, --single-instance        Allows only one instance running
+  -h, --help                   Print help
+  -V, --version                Print version
+```
+
+

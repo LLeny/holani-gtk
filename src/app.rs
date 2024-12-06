@@ -49,6 +49,8 @@ impl App {
             config.set_cartridge(cart.clone());
         }
 
+        config.set_single_instance(conf.single_instance());
+
         let mut runner = Runner::new();
 
         let (input_tx, config_tx, rotation) = runner.initialize_thread(event_tx.clone(), config.clone());
