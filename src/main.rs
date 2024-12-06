@@ -1,6 +1,6 @@
 #![windows_subsystem = "windows"]
 
-use std::fs::File;
+use std::fs::OpenOptions;
 use std::path::PathBuf;
 use app::App;
 use clap::Parser;
@@ -54,7 +54,15 @@ fn main() -> glib::ExitCode {
     
     let config = process_args();
 
-    let mut file_lock = RwLock::new(File::open(LOCK_ID).expect("Couldn't open locking file."));
+    let mut file_lock = RwLock::new(
+        OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(LOCK_ID)
+        .expect("Couldn't open locking file.")
+    );
     let lock_guard = file_lock.try_write();
     if lock_guard.is_err() && config.single_instance() {
         post_cart_name_to_shared_mem(&config);
