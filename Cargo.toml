@@ -1,11 +1,11 @@
 [package]
 name = "holani-gtk"
-version = "0.9.4"
+version = "0.9.6"
 edition = "2021"
 
 [dependencies]
 gtk = { version = "0.9.4", package = "gtk4", features = ["v4_12"] }
-holani = { git = "https://github.com/LLeny/holani.git", rev = "a2a802a" }
+holani = { git = "https://github.com/LLeny/holani.git", tag = "0.9.6" }
 env_logger = { version = "0.11.5", default-features = false, features = [
   "auto-color",
   "humantime",

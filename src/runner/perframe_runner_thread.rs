@@ -1,5 +1,5 @@
 use std::{path::{Path, PathBuf}, str::FromStr, time::{Duration, Instant}};
-use holani::{cartridge::lnx_header::LNXRotation, Lynx};
+use holani::{cartridge::lnx_header::LNXRotation, lynx::Lynx};
 use log::trace;
 use rodio::{buffer::SamplesBuffer, OutputStream, Sink};
 use shared_memory::{Shmem, ShmemConf, ShmemError};
