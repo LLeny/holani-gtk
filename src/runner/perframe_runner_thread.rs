@@ -1,17 +1,28 @@
-use std::{path::{Path, PathBuf}, str::FromStr, time::{Duration, Instant}};
+use super::{
+    runner_config::{RunnerAction, RunnerStatus},
+    RunnerConfig, RunnerThread, CRYSTAL_FREQUENCY, SAMPLE_RATE,
+};
+use crate::{sound_source::SoundSource, Event, CART_ID, LOCK_SIZE};
 use holani::{cartridge::lnx_header::LNXRotation, lynx::Lynx};
 use log::trace;
-use rodio::{buffer::SamplesBuffer, OutputStream, Sink};
+use ringbuf::{
+    traits::{Producer as _, Split as _},
+    HeapProd, HeapRb,
+};
+use rodio::OutputStream;
 use shared_memory::{Shmem, ShmemConf, ShmemError};
-use crate::{Event, CART_ID, LOCK_SIZE};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+    time::{Duration, Instant},
+};
 
-use super::{runner_config::{RunnerAction, RunnerStatus}, RunnerConfig, RunnerThread, CRYSTAL_FREQUENCY, SAMPLE_RATE};
 const TICKS_PER_AUDIO_SAMPLE: u64 = CRYSTAL_FREQUENCY as u64 / SAMPLE_RATE as u64;
+const SAMPLE_BUFFER_SIZE: usize = 2048;
 
 pub(crate) struct PerFrameRunnerThread {
     lynx: Lynx,
     sound_tick: u64,
-    sound_sample: Vec<i16>,
     config: RunnerConfig,
     input_rx: kanal::Receiver<(u8, u8)>,
     config_rx: kanal::Receiver<RunnerConfig>,
@@ -20,16 +31,15 @@ pub(crate) struct PerFrameRunnerThread {
     frame_time: Duration,
     next_lcd_refresh: Instant,
     last_refresh_rate: f64,
-    sink: Option<Sink>,
     stream: Option<OutputStream>,
 }
 
 impl PerFrameRunnerThread {
     pub(crate) fn new(
-        config: RunnerConfig, 
-        input_rx: kanal::Receiver<(u8, u8)>, 
-        config_rx: kanal::Receiver<RunnerConfig>, 
-        event_tx: kanal::Sender<Event>, 
+        config: RunnerConfig,
+        input_rx: kanal::Receiver<(u8, u8)>,
+        config_rx: kanal::Receiver<RunnerConfig>,
+        event_tx: kanal::Sender<Event>,
         rotation_tx: kanal::Sender<LNXRotation>,
     ) -> Self {
         Self {
@@ -40,16 +50,14 @@ impl PerFrameRunnerThread {
             event_tx,
             rotation_tx,
             sound_tick: 0,
-            sound_sample: vec![],
             frame_time: Duration::from_millis(16),
             last_refresh_rate: 0f64,
             next_lcd_refresh: Instant::now(),
-            sink: None,
             stream: None,
         }
     }
 
-    fn sound(&mut self) {
+    fn sound(&mut self, sound_buffer: &mut HeapProd<i16>) {
         if self.config.mute() {
             return;
         }
@@ -62,13 +70,15 @@ impl PerFrameRunnerThread {
 
         self.sound_tick = 0;
         let (l, r) = self.lynx.audio_sample();
-        self.sound_sample.push(l);
-        self.sound_sample.push(r);        
+        sound_buffer.push_slice(&[l, r]);
     }
 
     fn display(&mut self) {
         trace!("Display updated.");
-        let _ = self.event_tx.try_send(Event::UpdateDisplay(self.lynx.screen_rgb().to_vec())).is_ok();
+        let _ = self
+            .event_tx
+            .try_send(Event::UpdateDisplay(self.lynx.screen_rgba().to_vec()))
+            .is_ok();
     }
 
     fn inputs(&mut self) -> bool {
@@ -81,7 +91,7 @@ impl PerFrameRunnerThread {
         false
     }
 
-    fn config_update(&mut self)  {
+    fn config_update(&mut self) {
         if let Ok(Some(config)) = self.config_rx.try_recv() {
             self.config = config;
         }
@@ -118,23 +128,27 @@ impl PerFrameRunnerThread {
                 Ok(mut lynx) => {
                     lynx.set_comlynx_cable(&self.lynx.comlynx_cable().clone());
                     self.lynx = lynx;
-                },
-            }
+                }
+            },
         };
     }
 
     fn save_state(&mut self, file: PathBuf) {
         let size = self.lynx.serialize_size();
         let mut data: Vec<u8> = vec![0; size];
-        match holani::serialize(&self.lynx, data.as_mut_slice()){
+        match holani::serialize(&self.lynx, data.as_mut_slice()) {
             Err(_) => panic!(),
-            Ok(_)  => if std::fs::write(file, data).is_err() { panic!() }
+            Ok(_) => {
+                if std::fs::write(file, data).is_err() {
+                    panic!()
+                }
+            }
         };
     }
 
     fn load_cart(&mut self) {
         if let Some(cart) = self.config.cartridge() {
-            let data = std::fs::read(cart);            
+            let data = std::fs::read(cart);
             if data.is_err() {
                 return;
             }
@@ -142,12 +156,12 @@ impl PerFrameRunnerThread {
                 return;
             }
             trace!("Cart loaded.");
-        } 
+        }
     }
 
     fn load_rom(&mut self) {
         if let Some(rom) = self.config.rom() {
-            let data = std::fs::read(rom);            
+            let data = std::fs::read(rom);
             if data.is_err() {
                 return;
             }
@@ -168,13 +182,21 @@ impl RunnerThread for PerFrameRunnerThread {
     }
 
     fn run(&mut self) {
-
         let mut rf: f64;
 
+        let sound_ringbuf = HeapRb::<i16>::new(SAMPLE_BUFFER_SIZE * 2);
+        let (mut sound_buffer, sound_consumer) = sound_ringbuf.split();
+
         if !self.config.mute() {
-            let (stream, stream_handle) = OutputStream::try_default().unwrap();
-            self.stream = Some(stream);
-            self.sink = Some(Sink::try_new(&stream_handle).unwrap());
+            let stream_handle = rodio::OutputStreamBuilder::from_default_device()
+                .expect("open default audio device")
+                .with_buffer_size(rodio::cpal::BufferSize::Fixed(SAMPLE_BUFFER_SIZE as u32))
+                .open_stream()
+                .expect("open audio stream");
+
+            let source = SoundSource::new(sound_consumer);
+            stream_handle.mixer().add(source);
+            self.stream = Some(stream_handle);
         }
 
         let mut shmem: Option<Shmem> = None;
@@ -184,24 +206,31 @@ impl RunnerThread for PerFrameRunnerThread {
 
         if self.config.single_instance() {
             // Initialize the shared memory instance for signals
-            shmem = Some(match ShmemConf::new().size(LOCK_SIZE).flink(CART_ID).create() {
-                Ok(m) => m,
-                Err(ShmemError::LinkExists) => match ShmemConf::new().flink(CART_ID).open() {
+            shmem = Some(
+                match ShmemConf::new().size(LOCK_SIZE).flink(CART_ID).create() {
                     Ok(m) => m,
-                    Err(_) => match ShmemConf::new().size(LOCK_SIZE).flink(CART_ID).force_create_flink().create() {
+                    Err(ShmemError::LinkExists) => match ShmemConf::new().flink(CART_ID).open() {
                         Ok(m) => m,
-                        Err(e) => panic!("Unable to create or open shmem flink: {}", e),
-                    }
+                        Err(_) => match ShmemConf::new()
+                            .size(LOCK_SIZE)
+                            .flink(CART_ID)
+                            .force_create_flink()
+                            .create()
+                        {
+                            Ok(m) => m,
+                            Err(e) => panic!("Unable to create or open shmem flink: {}", e),
+                        },
+                    },
+                    Err(e) => panic!("Unable to create or open shmem flink: {}", e),
                 },
-                Err(e) => panic!("Unable to create or open shmem flink: {}", e)
-            });
-            unsafe { 
+            );
+            unsafe {
                 let m = shmem.as_ref().unwrap();
                 raw_ptr = m.as_ptr();
                 str_len = raw_ptr as *mut u32;
                 str_data = std::slice::from_raw_parts_mut(
                     raw_ptr.add(std::mem::size_of::<u32>()),
-                    m.len() - std::mem::size_of::<u32>()
+                    m.len() - std::mem::size_of::<u32>(),
                 );
                 *str_len = 0_u32;
             }
@@ -214,34 +243,36 @@ impl RunnerThread for PerFrameRunnerThread {
 
             // Check if a cart open request has been posted in the shared memory
             if self.config.single_instance() && unsafe { *str_len } > 0 {
-                let shared_str = unsafe { std::str::from_utf8_unchecked(&str_data[..std::ptr::read_volatile(str_len) as usize]) };
+                let shared_str = unsafe {
+                    std::str::from_utf8_unchecked(
+                        &str_data[..std::ptr::read_volatile(str_len) as usize],
+                    )
+                };
                 if Path::new(shared_str).exists() {
-                    self.config.set_cartridge(PathBuf::from_str(shared_str).unwrap());
+                    self.config
+                        .set_cartridge(PathBuf::from_str(shared_str).unwrap());
                     self.load_cart();
                     self.reset();
-                    }
+                }
                 unsafe { *str_len = 0 };
             }
 
             self.config_update();
 
             if self.config.cartridge().is_some() {
-                while self.config.status() == RunnerStatus::Running && !self.lynx.redraw_requested() {
+                while self.config.status() == RunnerStatus::Running && !self.lynx.redraw_requested()
+                {
                     self.lynx.tick();
-                    self.sound();
-                }
-
-                if !self.sound_sample.is_empty() {
-                self.sink.as_mut().unwrap().append(SamplesBuffer::new(2,SAMPLE_RATE, self.sound_sample.clone()));
-                self.sound_sample.clear();
+                    self.sound(&mut sound_buffer);
                 }
 
                 rf = self.lynx.display_refresh_rate();
-                if rf != self.last_refresh_rate {                
+                if rf != self.last_refresh_rate {
                     self.last_refresh_rate = rf;
-                    self.frame_time = Duration::from_micros((1000000f64 / self.last_refresh_rate) as u64);
+                    self.frame_time =
+                        Duration::from_micros((1000000f64 / self.last_refresh_rate) as u64);
                     trace!("set refresh rate to {} ({:?})", rf, self.frame_time);
-                } 
+                }
                 self.display();
             }
 

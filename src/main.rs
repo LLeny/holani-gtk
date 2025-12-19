@@ -11,6 +11,7 @@ use runner::runner_config::RunnerConfig;
 use shared_memory::{ShmemConf, ShmemError};
 
 pub(crate) mod app;
+mod sound_source;
 mod lynx_display;
 mod runner;
 

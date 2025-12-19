@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use gtk::{gdk, gio::{self, Menu, MenuItem, MenuModel, SimpleAction}, glib::{self, clone}, prelude::{ActionExt, ActionMapExtManual, ApplicationExt, BoxExt, ButtonExt, FileExt, GridExt, GtkApplicationExt, GtkWindowExt, ObjectExt, ToValue, WidgetExt}, AlertDialog, Application, ApplicationWindow, FileFilter, LayoutManager, PopoverMenu, PopoverMenuBar};
+use gtk::{Application, ApplicationWindow, gdk, gio::{self}, glib::{self, clone}, prelude::{ActionExt, ActionMapExtManual, ButtonExt, FileExt, GridExt, GtkApplicationExt, GtkWindowExt, ObjectExt, WidgetExt}};
 use holani::suzy::registers::{Joystick, Switches};
 use log::error;
 use strum::IntoEnumIterator;

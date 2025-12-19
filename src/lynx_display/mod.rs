@@ -14,27 +14,27 @@ impl Default for LynxDisplay {
 }
 
 impl LynxDisplay {
-
-    pub fn setup_next_frame(&self, data: &Vec<u8>) {
+    pub fn setup_next_frame(&self, data: &[u8]) {
         let imp = self.imp();
 
         let bytes = glib::Bytes::from(data);
 
         let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_bytes(
-            &bytes, 
-            gtk::gdk_pixbuf::Colorspace::Rgb ,
-            false, 
-            8, 
-            LYNX_SCREEN_WIDTH as i32, 
-            LYNX_SCREEN_HEIGHT as i32, 
-            LYNX_SCREEN_WIDTH as i32 * 3
+            &bytes,
+            gtk::gdk_pixbuf::Colorspace::Rgb,
+            true,
+            8,
+            LYNX_SCREEN_WIDTH as i32,
+            LYNX_SCREEN_HEIGHT as i32,
+            LYNX_SCREEN_WIDTH as i32 * 4,
         )
         .scale_simple(
-            LYNX_SCREEN_WIDTH as i32 * 2, 
-            LYNX_SCREEN_HEIGHT as i32 * 2, 
-            gtk::gdk_pixbuf::InterpType::Nearest
-        ).unwrap();
-       
+            LYNX_SCREEN_WIDTH as i32 * 2,
+            LYNX_SCREEN_HEIGHT as i32 * 2,
+            gtk::gdk_pixbuf::InterpType::Nearest,
+        )
+        .unwrap();
+
         let texture = gdk::Texture::for_pixbuf(&pixbuf);
 
         imp.next_frame.replace(Some(texture));
