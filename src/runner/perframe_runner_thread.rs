@@ -75,9 +75,21 @@ impl PerFrameRunnerThread {
 
     fn display(&mut self) {
         trace!("Display updated.");
+        let rgb_data: Vec<u8> = self
+            .lynx
+            .screen_argb()
+            .iter()
+            .flat_map(|p| {
+                [
+                    (p >> (16 & 0xFF)) as u8,
+                    (p >> (8 & 0xFF)) as u8,
+                    (p & 0xFF) as u8,
+                ]
+            })
+            .collect();
         let _ = self
             .event_tx
-            .try_send(Event::UpdateDisplay(self.lynx.screen_rgba().to_vec()))
+            .try_send(Event::UpdateDisplay(rgb_data))
             .is_ok();
     }
 
@@ -181,6 +193,7 @@ impl RunnerThread for PerFrameRunnerThread {
         Ok(())
     }
 
+    #[allow(unused_assignments)]
     fn run(&mut self) {
         let mut rf: f64;
 

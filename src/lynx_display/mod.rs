@@ -1,7 +1,7 @@
 mod imp;
 
 use gtk::{gdk, glib, prelude::*, subclass::prelude::*};
-use holani::mikey::video::{LYNX_SCREEN_HEIGHT, LYNX_SCREEN_WIDTH};
+use holani::consts::{LYNX_SCREEN_HEIGHT, LYNX_SCREEN_WIDTH};
 
 glib::wrapper! {
     pub struct LynxDisplay(ObjectSubclass<imp::LynxDisplay>) @implements gdk::Paintable;
@@ -14,19 +14,19 @@ impl Default for LynxDisplay {
 }
 
 impl LynxDisplay {
-    pub fn setup_next_frame(&self, data: &[u8]) {
+    pub fn setup_next_frame(&self, rgb_data: &[u8]) {
         let imp = self.imp();
 
-        let bytes = glib::Bytes::from(data);
+        let bytes = glib::Bytes::from(rgb_data);
 
         let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_bytes(
             &bytes,
             gtk::gdk_pixbuf::Colorspace::Rgb,
-            true,
+            false,
             8,
             LYNX_SCREEN_WIDTH as i32,
             LYNX_SCREEN_HEIGHT as i32,
-            LYNX_SCREEN_WIDTH as i32 * 4,
+            LYNX_SCREEN_WIDTH as i32 * 3,
         )
         .scale_simple(
             LYNX_SCREEN_WIDTH as i32 * 2,

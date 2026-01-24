@@ -25,7 +25,7 @@ macro_rules! btn_event {
 
 pub struct App {
     display: LynxDisplay,
-    runner: Runner,
+    _runner: Runner,
     config: RunnerConfig,
     input_tx: kanal::Sender<(u8, u8)>,
     config_tx: kanal::Sender<RunnerConfig>,
@@ -62,7 +62,7 @@ impl App {
 
         let mut slf = Self {
             display: LynxDisplay::default(),
-            runner,
+            _runner: runner,
             config,          
             input_tx,
             config_tx,
@@ -76,8 +76,8 @@ impl App {
         slf
     }
 
-    pub fn setup_next_frame(&mut self, data: &Vec<u8>) {
-        self.display.setup_next_frame(data);
+    pub fn setup_next_frame(&mut self, rgb_data: &Vec<u8>) {
+        self.display.setup_next_frame(rgb_data);
     }
 
     pub fn set_new_config(&mut self, config: RunnerConfig) {

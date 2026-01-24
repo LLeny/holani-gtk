@@ -1,12 +1,12 @@
 [package]
 name = "holani-gtk"
-version = "0.9.8"
+version = "0.9.9"
 rust-version = "1.84"
 edition = "2021"
 
 [dependencies]
 gtk = { version = "0.10.3", package = "gtk4", features = ["v4_12"] }
-holani = { git = "https://github.com/LLeny/holani.git", tag = "0.9.8" }
+holani = { git = "https://github.com/LLeny/holani.git", tag = "0.9.9" }
 env_logger = { version = "0.11.6", default-features = false, features = [
   "auto-color",
   "humantime",

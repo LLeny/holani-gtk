@@ -125,10 +125,12 @@ impl RunnerConfig {
         self.mute = mute;
     }
     
+    #[allow(dead_code)]
     pub(crate) fn comlynx(&self) -> bool {
         self.comlynx
     }
     
+    #[allow(dead_code)]
     pub(crate) fn set_comlynx(&mut self, comlynx: bool) {
         self.comlynx = comlynx;
     }
@@ -141,6 +143,7 @@ impl RunnerConfig {
         self.status = status;
     }
     
+    #[allow(dead_code)]
     pub(crate) fn rotation(&self) -> LNXRotation {
         self.rotation
     }
