@@ -46,7 +46,7 @@ jobs:
           py -m venv .venv
           .\.venv\Scripts\activate.ps1
           py -m pip install gvsbuild
-          gvsbuild build --vs-ver=vs2022 gtk4 librsvg
+          gvsbuild build --vs-ver=vs2026 gtk4 librsvg
         if: steps.cache-gtk4.outputs.cache-hit != 'true'    
       - name: Configure GTK4 (Windows)
         run: |
