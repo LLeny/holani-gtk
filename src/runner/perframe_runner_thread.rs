@@ -9,7 +9,7 @@ use ringbuf::{
     traits::{Producer as _, Split as _},
     HeapProd, HeapRb,
 };
-use rodio::OutputStream;
+use rodio::MixerDeviceSink;
 use shared_memory::{Shmem, ShmemConf, ShmemError};
 use std::{
     path::{Path, PathBuf},
@@ -17,7 +17,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const TICKS_PER_AUDIO_SAMPLE: u64 = CRYSTAL_FREQUENCY as u64 / SAMPLE_RATE as u64;
+const TICKS_PER_AUDIO_SAMPLE: u64 = CRYSTAL_FREQUENCY as u64 / SAMPLE_RATE.get() as u64;
 const SAMPLE_BUFFER_SIZE: usize = 2048;
 
 pub(crate) struct PerFrameRunnerThread {
@@ -31,7 +31,7 @@ pub(crate) struct PerFrameRunnerThread {
     frame_time: Duration,
     next_lcd_refresh: Instant,
     last_refresh_rate: f64,
-    stream: Option<OutputStream>,
+    stream: Option<MixerDeviceSink>,
 }
 
 impl PerFrameRunnerThread {
@@ -201,15 +201,15 @@ impl RunnerThread for PerFrameRunnerThread {
         let (mut sound_buffer, sound_consumer) = sound_ringbuf.split();
 
         if !self.config.mute() {
-            let stream_handle = rodio::OutputStreamBuilder::from_default_device()
+            let sink_handle = rodio::DeviceSinkBuilder::from_default_device()
                 .expect("open default audio device")
                 .with_buffer_size(rodio::cpal::BufferSize::Fixed(SAMPLE_BUFFER_SIZE as u32))
                 .open_stream()
                 .expect("open audio stream");
 
             let source = SoundSource::new(sound_consumer);
-            stream_handle.mixer().add(source);
-            self.stream = Some(stream_handle);
+            sink_handle.mixer().add(source);
+            self.stream = Some(sink_handle);
         }
 
         let mut shmem: Option<Shmem> = None;

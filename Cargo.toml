@@ -1,12 +1,12 @@
 [package]
 name = "holani-gtk"
-version = "0.9.9"
+version = "1.0.0"
 rust-version = "1.84"
 edition = "2021"
 
 [dependencies]
-gtk = { version = "0.10.3", package = "gtk4", features = ["v4_12"] }
-holani = { git = "https://github.com/LLeny/holani.git", tag = "0.9.9" }
+gtk = { version = "0.11.4", package = "gtk4", features = ["v4_12"] }
+holani = { git = "https://github.com/LLeny/holani.git", tag = "1.0.0" }
 env_logger = { version = "0.11.6", default-features = false, features = [
   "auto-color",
   "humantime",
@@ -16,17 +16,17 @@ log = { version = "0.4", features = [
   "release_max_level_warn",
 ] }
 serde = { version = "1", features = ["derive"] }
-kanal = { git = "https://github.com/fereidani/kanal.git", rev = "9a4b98d570258410fa07c5329e3c4499533b1e92" }
-rodio = "0.21.1"
+kanal = { git = "https://github.com/fereidani/kanal.git", rev = "65723e13ad71222ee60b9379317b88db2aa4db27" }
+rodio = "0.22.2"
 thread-priority = "3.0.0"
 confy = "2.0.0"
 strum = "0.27.2"
-strum_macros = "0.27.2"
+strum_macros = "0.28.0"
 shared_memory = "0.12"
 clap = { version = "4.5.53", features = ["derive"] }
 fd-lock = "4.0.2"
 dasp_sample = "0.11.0"
-ringbuf = "0.4.8"
+ringbuf = "0.5.1"
 
 [profile.release]
 codegen-units = 1

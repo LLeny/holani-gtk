@@ -1,4 +1,4 @@
-use std::thread::JoinHandle;
+use std::{num::NonZero, thread::JoinHandle};
 use holani::cartridge::lnx_header::LNXRotation;
 use log::trace;
 use perframe_runner_thread::PerFrameRunnerThread;
@@ -11,7 +11,7 @@ pub(crate) mod runner_config;
 pub(crate) mod perframe_runner_thread;
 
 pub const CRYSTAL_FREQUENCY: u32 = 16_000_000;
-pub const SAMPLE_RATE: u32 = 16_000;
+pub const SAMPLE_RATE: NonZero<u32> = NonZero::new(16_000).unwrap();
 
 pub(crate) trait RunnerThread {
     fn initialize(&mut self) -> Result<(), &str>;
